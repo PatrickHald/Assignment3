@@ -1,0 +1,32 @@
+#include <helper_cuda.h>
+#include <stdlib.h>
+
+__global__ double jacobi_gpu_seq(int para, int N, double **array_in, double **array_out, int max_iter, double threshold, double **fmatrix) {
+
+/* array_in and array_out are (N+2)*(N+2) */
+
+    int 	i, j, k=0;
+    double 	**tmp;
+
+
+
+//// SEQUENTIAL GPU KERNEL
+    while (k < max_iter) {
+    	for(i = 1; i <= N; i++){ 
+	    for(j = 1; j <= N; j++){
+	    	array_out[i][j] = 0.25*(array_in[i-1][j]+array_in[i+1][j]+array_in[i] 			[j-1]+array_in[i][j+1]+fmatrix[i][j]);
+		}
+	   }
+	tmp=array_in;
+	array_in = array_out;
+	array_out = tmp;
+	k++;
+
+    }
+
+
+
+
+
+    return k;
+}

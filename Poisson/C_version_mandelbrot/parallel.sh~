@@ -1,0 +1,16 @@
+TIMEFORMAT='%3R'
+OMP_DYNAMIC=true
+
+for((n=1; n<= 30; n+= 1)); do echo "$n"; time OMP_NUM_THREADS=$n mandelbrot; done >times_mandelbrot_tmp1.dat 2>&1
+
+awk ' NR == 2 { t1 = $1}; NR % 2 == 1 { t = $1 }; NR % 2 == 0 {s = $1}; {print t, s, t1}' times_mandelbrot_tmp1.dat > times_mandelbrot1.dat
+
+awk ' NR % 3 == 0 {print $1, $3 / $2}' times_mandelbrot1.dat > times_mandel_clean1.dat
+
+gnuplot -persist <<-EOFMarker
+	set terminal postscript eps enhanced color font 'Helvetica,10'
+	set xlabel "Number of threads"
+	set ylabel "Speedup"
+	set output "Speedup_mandel.eps"
+	plot "times_mandel_clean.dat" w lp title 'orphaned', "identity.dat" w l title 'ideal', "times_mandel_clean1.dat" w lp title 'non orphaned'
+EOFMarker

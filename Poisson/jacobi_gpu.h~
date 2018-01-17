@@ -1,0 +1,8 @@
+#ifndef __JACOBI_GPU_H
+#define __JACOBI_GPU_H
+
+
+__global__ double jacobi_gpu_seq(int N, double **array_in, double **array_out, int max_iter, double threshold, double **fmatrix);
+
+
+#endif

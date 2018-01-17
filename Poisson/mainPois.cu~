@@ -1,0 +1,134 @@
+/*#include "jacobi.h"
+#include "jacobi_gpu_seq.h"
+#include "gauss_seidel.h"
+#include "Mallocation.h"
+#include <stdlib.h>
+#include <helper_cuda.h>*/
+
+int main(int argc, char *argv[]){
+/*
+
+///// PRELOAD AND INITIALIZATION /////
+    int method = atoi(argv[1]);
+    int N = atoi(argv[2]);
+    int max_iter = atoi(argv[3]);
+    double threshold = atof(argv[4]);
+    double num_iter;
+
+
+
+
+
+
+
+///// JACOBI METHOD/////
+
+
+       
+
+
+	///OpenMP METHOD
+	if(method==0){
+
+   	// Allocate and initialize the NxN matrix for the room with Dirichlet conditions
+   	double ** matrixOut = malloc_matrix(N+2,N+2);
+    	double ** matrixIn = malloc_matrix(N+2,N+2);
+    	init_data(N+2, N+2, matrixOut);
+    	init_data(N+2, N+2, matrixIn);
+
+    	for(int i=0; i<N+2; ++i){
+    	matrixOut[i][N+1]=20.0;
+    	matrixOut[N+1][i]=20.0;
+    	matrixOut[0][i]=20.0;
+	matrixOut[i][0]=0.0;
+	matrixIn[i][N+1]=20.0;
+    	matrixIn[N+1][i]=20.0;
+    	matrixIn[0][i]=20.0;
+	matrixIn[i][0]=0.0;
+    	}
+
+  	  // Create the matrix for values of the function
+    	double ** fmatrix = malloc_matrix(N+2,N+2);
+    	init_f_2d(N, fmatrix);	
+
+    	num_iter = jacobi(method, N, matrixIn, matrixOut, max_iter, threshold, fmatrix);
+
+}
+
+
+
+
+
+	///GPU SEQUENTIAL METHOD 1 THREAD
+	else if(method==1){
+
+	///// IF USING GPU VERSION, WE MUST ALLOCATE 1D POINTERS
+
+    // Allocate and initialize matrixOut and matrixIn
+    double * matrixOut;
+    double * matrixIn;
+    for(int i=0; i<N+2; ++i){
+	for(int j=0; j<N+2; ++j){
+		matrixOut[i*(N+1)+j]=0;
+		matrixIn[i*(N+1)+j]=0;
+	}
+}
+
+    for(int i=0; i<N+2; ++i){
+	matrixOut[i*(N+1)+(N+1)]=20.0;
+	matrixOut[(N+1)*(N+1)+i]=20.0;
+	matrixOut[i]=20.0;
+	matrixOut[i*(N+1)]=0.0;
+
+        matrixIn[i*(N+1)+(N+1)]=20.0;
+	matrixIn[(N+1)*(N+1)+i]=20.0;
+	matrixIn[i]=20.0;
+	matrixIn[i*(N+1)]=0.0;
+    }
+
+   	 // Create the matrix for values of the function
+   	 double * fmatrix;
+	 for(int i=0; i<N; ++i){
+		for(int j=0; j<N; ++j){
+			fmatrix[i*N+j]=0;
+		}	
+	}
+    	 init_f(N, fmatrix);
+
+	dim3 dimGrid(1,1); // number of blocks
+	dim3 dimBlock(1,1); // number of threads per block
+
+
+	 // Allocate mem for an array of N doubles 
+   	 double *d_In;
+	 double *d_Out;
+   	 double size = (N+1) * (N+1) * sizeof(double); 
+   	 cudaMalloc((void**)&d_In, size); 
+  	 cudaMalloc((void**)&d_Out, size); 
+
+    	// Transfer data from host to device 
+    	cudaMemcpy(d_In, matrixIn, size, cudaMemcpyHostToDevice); 
+	cudaMemcpy(d_Out, matrixOut, size, cudaMemcpyHostToDevice); 
+	
+	int k=0;
+	while(k<max_iter){
+	jacobi_gpu_seq<<<dimGrid,dimBlock>>>(N, d_In, d_Out, fmatrix);
+	cudaDeviceSynchronize();
+	k++;	
+	}
+	    
+        // Transfer data from device to host 
+        cudaMemcpy(matrixOut, d_Out, size, cudaMemcpyDeviceToHost);
+   	cudaFree(d_In);
+	cudaFree(d_Out); 
+
+}
+
+
+
+
+
+printf("%d %f\n",N, num_iter); */
+return 0;
+}
+
