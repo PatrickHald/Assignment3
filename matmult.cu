@@ -19,7 +19,7 @@ extern "C" {
 #define MIN(a,b) ((a) < (b) ? a : b)
 
 //choose if you want the times to be printed
-#define PRINT_TIMES 0
+#define PRINT_TIMES 1
 
 
 void matmult_nat(int m,int n,int k,double *A,double *B,double *C);
@@ -57,7 +57,13 @@ void matmult_nat(int m,int n,int k,double *A,double *B,double *C)
 
 void matmult_lib(int m,int n,int k,double *A,double *B,double *C)
 {
+    double time0 = omp_get_wtime();
     cblas_dgemm(CblasRowMajor,CblasNoTrans,CblasNoTrans,m,n,k,1,A,k,B,n,0,C,n);
+    double time1 = omp_get_wtime();
+
+    if (PRINT_TIMES == 1)
+	printf("time to transfer HtoD = %3.6f seconds\n", time1 - time0);
+
 }
 
 void matmult_mkn(int m,int n,int k,double *A,double *B,double *C)
@@ -163,7 +169,7 @@ __global__ void gpu1(int m,int n,int k,double *A,double *B,double *C)
 
 void matmult_gpu1(int m,int n,int k,double *A,double *B,double *C)
 {
-    // The GPU uses only 1 thread
+ // The GPU uses only 1 thread
 
     double *d_A, *d_B, *d_C;
     
@@ -221,7 +227,7 @@ __global__ void gpu2(int m,int n,int k,double *A,double *B,double *C)
 
 void matmult_gpu2(int m,int n,int k,double *A,double *B,double *C)
 {
-    // We use one thread per element of C, which is m * n
+// We use one thread per element of C, which is m * n
    double *d_A, *d_B, *d_C;
     
     // Allocate memory on the GPU
@@ -267,9 +273,80 @@ void matmult_gpu2(int m,int n,int k,double *A,double *B,double *C)
  
 }
 
+__global__ void gpu3_meven(int m,int n,int k,double *A,double *B,double *C)
+{
+    int l;
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    double res = 0.0;
+    if(2*i < m && j < n){
+	FOR_l_TO_k
+	    res += A[i * k + l] * B[l * n + j];
+	C[i * n + j] = res;
+    }
+    
+}
 
+__global__ void gpu3_modd(int m,int n,int k,double *A,double *B,double *C)
+{
+    int l;
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    double res = 0.0;
+    if(2*i < m && j < n){
+	FOR_l_TO_k
+	    res += A[i * k + l] * B[l * n + j];
+	C[i * n + j] = res;
+    }
+    
+}
 void matmult_gpu3(int m,int n,int k,double *A,double *B,double *C)
 {
+// Each thread computes 2 elements of C
+   double *d_A, *d_B, *d_C;
+    
+    // Allocate memory on the GPU
+    cudaMalloc((void**)&d_A, SIZE_A);
+    cudaMalloc((void**)&d_B, SIZE_B);
+    cudaMalloc((void**)&d_C, SIZE_C);
+
+    double time0 = omp_get_wtime();
+
+    // Transfer data from host to device 
+    cudaMemcpy(d_A, A, SIZE_A, cudaMemcpyHostToDevice); 
+    cudaMemcpy(d_B, B, SIZE_B, cudaMemcpyHostToDevice); 
+    cudaMemcpy(d_C, C, SIZE_C, cudaMemcpyHostToDevice); 
+
+    double time1 = omp_get_wtime();
+
+    // Cuda launch
+    int K = 16;
+    int G = SIZE_C / K + 1;
+    dim3 dimGrid(1 + G/2,G,1); // number of blocks 2D
+    dim3 dimBlock(K,K,1); // number of threads per block 2D
+    if (m%2 == 1)
+	gpu3_modd<<<dimGrid,dimBlock>>>(m, n, k, d_A, d_B, d_C);
+
+    cudaDeviceSynchronize();
+
+    double time2 = omp_get_wtime();
+
+    // Transfer data from device to host 
+    cudaMemcpy(C, d_C, SIZE_C, cudaMemcpyDeviceToHost); 
+
+    double time3 = omp_get_wtime();
+
+    // Free the allocated memory on the GPU
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
+
+    if (PRINT_TIMES == 1){
+	printf("time to transfer HtoD = %3.6f seconds\n", time1 - time0);
+	printf("time to run the program = %3.6f seconds\n", time2 - time1);
+	printf("time to transfer DtoH = %3.6f seconds\n", time3 - time2);
+	printf("total time = %3.6f seconds\n", time3 - time0);
+    }
 
 }
 
