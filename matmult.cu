@@ -145,7 +145,8 @@ void matmult_blk(int m,int n,int k,double *A,double *B,double *C, int bs)
 	};
 }
 
-__global__ void gpu1(int m,int n,int k,double *A,double *B,double *C){
+__global__ void gpu1(int m,int n,int k,double *A,double *B,double *C)
+{
     int i, j, l;
     
     RESET_C
@@ -153,7 +154,7 @@ __global__ void gpu1(int m,int n,int k,double *A,double *B,double *C){
     FOR_i_TO_m
         FOR_l_TO_k
             FOR_j_TO_n
-                C[i * n + j] += A[i * k + l] * B[l * n + j];
+                atomicAdd(&C[i * n + j] , A[i * k + l] * B[l * n + j]);
 }
 
 void matmult_gpu1(int m,int n,int k,double *A,double *B,double *C)
@@ -186,10 +187,51 @@ void matmult_gpu1(int m,int n,int k,double *A,double *B,double *C)
     
 }
 
+__global__ void gpu2(int m,int n,int k,double *A,double *B,double *C)
+{
+    int l;
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    double res = 0.0;
+    if(i < m && j < n)
+	FOR_l_TO_k
+	    res += A[i * k + l] * B[l * n + j];
+    if(i < m && j < n)
+	C[i * n + j] = res;
+    
+}
 
 void matmult_gpu2(int m,int n,int k,double *A,double *B,double *C)
 {
+    // We use one thread per element of C, which is m * n
+   double *d_A, *d_B, *d_C;
+    
+    // Allocate memory on the GPU
+    cudaMalloc((void**)&d_A, SIZE_A);
+    cudaMalloc((void**)&d_B, SIZE_B);
+    cudaMalloc((void**)&d_C, SIZE_C);
 
+    // Transfer data from host to device 
+    cudaMemcpy(d_A, A, SIZE_A, cudaMemcpyHostToDevice); 
+    cudaMemcpy(d_B, B, SIZE_B, cudaMemcpyHostToDevice); 
+    cudaMemcpy(d_C, C, SIZE_C, cudaMemcpyHostToDevice); 
+
+    // Cuda launch
+    int K = 16;
+    int G = SIZE_C / K + 1;
+    dim3 dimGrid(G,G,1); // number of blocks 2D
+    dim3 dimBlock(K,K,1); // number of threads per block 2D
+    gpu2<<<dimGrid,dimBlock>>>(m, n, k, d_A, d_B, d_C);
+    cudaDeviceSynchronize();
+
+    // Transfer data from device to host 
+    cudaMemcpy(C, d_C, SIZE_C, cudaMemcpyDeviceToHost); 
+
+    // Free the allocated memory on the GPU
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
+ 
 }
 
 
