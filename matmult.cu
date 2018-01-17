@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <helper_cuda.h>
 
+extern "C" {
+#include <cblas.h>
+
 #define FOR_i_TO_m for (i = 0; i < m; i++)
 #define FOR_j_TO_n for (j = 0; j < n; j++)
 #define FOR_l_TO_k for (l = 0; l < k; l++)
@@ -13,9 +16,6 @@
 #define SIZE_C m*n*sizeof(double)
 
 #define MIN(a,b) ((a) < (b) ? a : b)
-
-extern "C" {
-#include <cblas.h>
 
 
 void matmult_nat(int m,int n,int k,double *A,double *B,double *C);
@@ -29,7 +29,7 @@ void matmult_nmk(int m,int n,int k,double *A,double *B,double *C);
 void matmult_nkm(int m,int n,int k,double *A,double *B,double *C);
 
 void matmult_blk(int m,int n,int k,double *A,double *B,double *C, int bs);
-}
+
 void matmult_gpu1(int m,int n,int k,double *A,double *B,double *C);
 void matmult_gpu2(int m,int n,int k,double *A,double *B,double *C);
 void matmult_gpu3(int m,int n,int k,double *A,double *B,double *C);
@@ -37,7 +37,7 @@ void matmult_gpu4(int m,int n,int k,double *A,double *B,double *C);
 void matmult_gpu5(int m,int n,int k,double *A,double *B,double *C);
 void matmult_gpu6(int m,int n,int k,double *A,double *B,double *C);
 
-
+}
 
 void matmult_nat(int m,int n,int k,double *A,double *B,double *C)
 {
@@ -153,10 +153,11 @@ __global__ void gpu1(int m,int n,int k,double *A,double *B,double *C){
     FOR_i_TO_m
         FOR_l_TO_k
             FOR_j_TO_n
-                atomicAdd(&C[i * n + j] , A[i * k + l] * B[l * n + j]);
+                C[i * n + j] += A[i * k + l] * B[l * n + j];
 }
 
-void matmult_gpu1(int m,int n,int k,double *A,double *B,double *C){
+void matmult_gpu1(int m,int n,int k,double *A,double *B,double *C)
+{
     // The GPU uses only 1 thread
 
     double *d_A, *d_B, *d_C;
@@ -186,27 +187,33 @@ void matmult_gpu1(int m,int n,int k,double *A,double *B,double *C){
 }
 
 
-void matmult_gpu2(int m,int n,int k,double *A,double *B,double *C){
+void matmult_gpu2(int m,int n,int k,double *A,double *B,double *C)
+{
 
 }
 
 
-void matmult_gpu3(int m,int n,int k,double *A,double *B,double *C){
+void matmult_gpu3(int m,int n,int k,double *A,double *B,double *C)
+{
 
 }
 
 
-void matmult_gpu4(int m,int n,int k,double *A,double *B,double *C){
+void matmult_gpu4(int m,int n,int k,double *A,double *B,double *C)
+{
 
 }
 
 
-void matmult_gpu5(int m,int n,int k,double *A,double *B,double *C){
+void matmult_gpu5(int m,int n,int k,double *A,double *B,double *C)
+{
 
 }
 
 
-void matmult_gpu6(int m,int n,int k,double *A,double *B,double *C){
+void matmult_gpu6(int m,int n,int k,double *A,double *B,double *C)
+{
 
 }
+
 
