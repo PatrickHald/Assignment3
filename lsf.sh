@@ -8,5 +8,6 @@
 
 #BSUB -R "rusage[mem=8GB]"
 #BSUB -gpu "num=1:mode=exclusive_process:mps=yes"
+module load cuda/9.1
 
-echo "Hello"
+plot_q0203.sh
