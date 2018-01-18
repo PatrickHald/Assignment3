@@ -1,21 +1,21 @@
 TARGET	= proj2
-LIBOBJS	= mainPois.o jacobi.o jacobi_gpu_seq.o gauss_seidel.o Mallocation.o
-LIBSRCS	= 
+LIBOBJS	= mainPois.o jacobi.o jacobi_gpu_seq.o Mallocation.o
+LIBSRCS	= mainPois.cu jacobi.cu jacobi_gpu_seq.cu Mallocation.cu
 
 OPT	= -g -O3
-PIC = -fpic
+PIC = #-fpic
 OMP   = -fopenmp
-XPIC  = -Xcompiler -fpic
+XPIC  = -Xcompiler #-fpic
 XOPT  = -Xptxas=-v # use -lineinfo for profiler, use -G for debugging
 XARCH = -arch=sm_70
-CC = gcc
+
 CXX	= nvcc
 CXXFLAGS = --compiler-options "$(OPT) $(PIC) $(OMP)" $(XARCH) $(XOPT) $(XPIC)
 
 CUDA_PATH ?= /appl/cuda/9.1
 INCLUDES = -I$(CUDA_PATH)/include -I$(CUDA_PATH)/samples/common/inc
 
-SOFLAGS = -shared
+SOFLAGS = #-shared
 XLIBS	= -lcublas
 
 $(TARGET): $(LIBOBJS)
@@ -24,15 +24,16 @@ $(TARGET): $(LIBOBJS)
 .SUFFIXES: .cu
 .cu.o:
 	$(CXX) -o $*.o -c $*.cu $(CXXFLAGS) $(SOFLAGS) $(INCLUDES)
+.c.o:
+	$(CXX) -o $*.o -c $*.c $(CXXFLAGS) $(SOFLAGS) $(INCLUDES)
 
 clean:
 	/bin/rm -f $(TARGET) $(LIBOBJS) 
 
 # dependencies
 #
-main.o  : mainPois.cu jacobi.h jacobi_gpu_seq.h gauss_seidel.h Mallocation.h
-mainPois.o: mainPois.cu Mallocation.h jacobi.h jacobi_gpu_seq.h gauss_seidel.h
-jacobi.o: jacobi.h jacobi.c
+main.o  : mainPois.cu jacobi.h jacobi_gpu_seq.h Mallocation.h
+mainPois.o: mainPois.cu Mallocation.h jacobi.h jacobi_gpu_seq.h
+jacobi.o: jacobi.h jacobi.cu
 jacobi_gpu_seq.o: jacobi_gpu_seq.h jacobi_gpu_seq.cu
-gauss_seidel.o: gauss_seidel.h gauss_seidel.c
-Mallocation.o: Mallocation.h Mallocation.c
+Mallocation.o: Mallocation.h Mallocation.cu

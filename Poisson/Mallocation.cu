@@ -10,11 +10,11 @@ double **malloc_matrix(int m, int n){
     if (m <= 0 || n <= 0)
 	return NULL;
 
-    double **A = malloc(m * sizeof(double *));
+    double **A = (double **)malloc(m * sizeof(double *));
     if (A == NULL)
 	return NULL;
 
-    A[0] = malloc(m*n*sizeof(double));
+    A[0] = (double *)malloc(m*n*sizeof(double));
     if (A[0] == NULL) {
 	free(A);
 	return NULL;
@@ -47,10 +47,10 @@ void init_f (int N, double *A){
     for(i = 1; i <= N; i++){
 	for(j = 1; j <= N; j++){ 
 	     if(i>=i_inf && i <= i_sup && j>=j_inf && j<=j_sup){
-	    	A[i*(N+1)+j] = fdelta2;
+	    	A[i*(N+2)+j] = fdelta2;
 		     }
 		else{
-		A[i*(N+1)+j] = 0.0;
+		A[i*(N+2)+j] = 0.0;
 		     }
 	}
     }
