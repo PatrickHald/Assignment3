@@ -3,6 +3,8 @@
 #include <helper_cuda.h>
 #include <omp.h>
 
+
+#include <cublas_v2.h>
 extern "C" {
 #include <cblas.h>
 
@@ -42,6 +44,7 @@ void matmult_gpu3(int m,int n,int k,double *A,double *B,double *C);
 void matmult_gpu4(int m,int n,int k,double *A,double *B,double *C);
 void matmult_gpu5(int m,int n,int k,double *A,double *B,double *C);
 void matmult_gpu6(int m,int n,int k,double *A,double *B,double *C);
+void matmult_gpulib(int m,int n,int k,double *A,double *B,double *C);
 
 }
 
@@ -574,7 +577,21 @@ void matmult_gpu5(int m,int n,int k,double *A,double *B,double *C)
 }
 
 
+void matmult_gpulib(int m,int n,int k,double *A,double *B,double *C)
+{
+    cublasHandle_t handle;
+    /*cublasStatus_t stat;
+    cublasCreate(&handle);*/
+    //cublasStatus_t;
+    cublasCreate(&handle);
+    double alpha; 
+    double beta;
+    alpha= 1.0;
+    beta = 0.0;
+    cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha, B, k, A, m, &beta, C, m );
+    cublasDestroy(handle);
 
+}
 
 void matmult_gpu6(int m,int n,int k,double *A,double *B,double *C)
 {
