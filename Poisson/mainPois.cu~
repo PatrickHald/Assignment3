@@ -218,7 +218,7 @@ if(method==3){
 	 double *d0_f;
 	 double *d1_f;
    	 double size = (N+2) * (N+2) * sizeof(double); 
-	 double size2 = ((N+2)/2) * ((N+2)/2)* sizeof(double); 
+	 double size2 = ((N+2)/2) * ((N+2))* sizeof(double); 
 	 cudaMalloc((void**)&d0_temp, size2); 
    	 cudaMalloc((void**)&d0_In, size2); 
   	 cudaMalloc((void**)&d0_Out, size2); 
@@ -236,11 +236,11 @@ if(method==3){
 	cudaMemcpy(d1_In, matrixInLo, size2, cudaMemcpyHostToDevice); 
 	cudaMemcpy(d1_Out, matrixOutLo, size2, cudaMemcpyHostToDevice); 
 	cudaMemcpy(d1_f, fmatrixLo, size2, cudaMemcpyHostToDevice);
- 
+
 
 	int K = 32;
         int Gx = ceil((double)N / K);
-        int Gy = ceil((double)N / K)/2;
+        int Gy = ceil((double)N / (2*K));
         dim3 dimGrid(Gx,Gy,1); // number of blocks 2D
         dim3 dimBlock(K,K,1); // number of threads per block 2D
 
@@ -272,8 +272,8 @@ if(method==3){
 	printf("Time for gpu_3 method: %f\n", time5-time4);
 	d0_Out=d0_In;
 	d1_Out=d1_In;
-	cudaMemcpy(matrixOutUp, d0_Out, size, cudaMemcpyDeviceToHost);
-	cudaMemcpy(matrixOutLo, d1_Out, size, cudaMemcpyDeviceToHost);
+	cudaMemcpy(matrixOutUp, d0_Out, size2, cudaMemcpyDeviceToHost);
+	cudaMemcpy(matrixOutLo, d1_Out, size2, cudaMemcpyDeviceToHost);
 	cudaFree(d0_temp);
    	cudaFree(d0_In);
 	cudaFree(d0_Out); 
@@ -293,6 +293,7 @@ if(method==3){
 	}
 	}
 matrixOutFinal1d=matrixOut;
+
 }
 
 
