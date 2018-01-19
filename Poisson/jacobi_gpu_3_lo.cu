@@ -1,0 +1,20 @@
+#include <helper_cuda.h>
+#include <stdlib.h>
+
+__global__ void jacobi_gpu_3_lo(int N, double *array_in, double *array_out, double *fmatrix, double * hiIn) {
+
+
+
+
+    int j = threadIdx.x + blockIdx.x * blockDim.x;
+    int i = threadIdx.y + blockIdx.y * blockDim.y;
+
+	if(i == 0 && j <N){
+array_out[j+1] = 0.25*(array_in[j]+hiIn[(((N+2)/2)-1)*(N+2)+j+1]+array_in[j+2]+array_in[(i+1)*((N+2))+j+1]+fmatrix[j+1]);
+	}
+
+    else if(i < ((N+2)/2)-1 && j < N){ 
+array_out[(i)*((N+2))+j+1] = 0.25*(array_in[(i-1)*((N+2))+j+1]+array_in[(i+1)*((N+2))+j+1]+array_in[(i)*((N+2))+j+2]+array_in[(i)*((N+2))+j]+fmatrix[(i)*((N+2))+j+1]);
+	}
+
+}

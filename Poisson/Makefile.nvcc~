@@ -1,6 +1,6 @@
 TARGET	= proj2
-LIBOBJS	= mainPois.o jacobi.o jacobi_gpu_seq.o Mallocation.o
-LIBSRCS	= mainPois.cu jacobi.cu jacobi_gpu_seq.cu Mallocation.cu
+LIBOBJS	= mainPois.o jacobi.o jacobi_gpu_1.o jacobi_gpu_2.o jacobi_gpu_3_up.o jacobi_gpu_3_lo.o Mallocation.o
+LIBSRCS	= mainPois.cu jacobi.cu jacobi_gpu_1.cu jacobi_gpu_2.cu jacobi_gpu_3_up.cu jacobi_gpu_3_lo.cu Mallocation.cu
 
 OPT	= -g -O3
 PIC = #-fpic
@@ -32,8 +32,11 @@ clean:
 
 # dependencies
 #
-main.o  : mainPois.cu jacobi.h jacobi_gpu_seq.h Mallocation.h
-mainPois.o: mainPois.cu Mallocation.h jacobi.h jacobi_gpu_seq.h
+main.o  : mainPois.cu jacobi.h jacobi_gpu_1.h jacobi_gpu_2.h jacobi_gpu_3_up.h jacobi_gpu_3_lo.h Mallocation.h
+mainPois.o: mainPois.cu Mallocation.h jacobi.h jacobi_gpu_1.h jacobi_gpu_2.h jacobi_gpu_3_up.h jacobi_gpu_3_lo.h
 jacobi.o: jacobi.h jacobi.cu
-jacobi_gpu_seq.o: jacobi_gpu_seq.h jacobi_gpu_seq.cu
+jacobi_gpu_1.o: jacobi_gpu_1.h jacobi_gpu_1.cu
+jacobi_gpu_2.o: jacobi_gpu_2.h jacobi_gpu_2.cu
+jacobi_gpu_3_up.o: jacobi_gpu_3_up.h jacobi_gpu_3_up.cu
+jacobi_gpu_3_lo.o: jacobi_gpu_3_lo.h jacobi_gpu_3_lo.cu
 Mallocation.o: Mallocation.h Mallocation.cu
