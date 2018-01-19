@@ -636,19 +636,6 @@ void matmult_gpu5(int m,int n,int k,double *A,double *B,double *C)
     SetElement(Csub, row, col, Cvalue);
 }
 
-/*void matmult_gpulib(int m,int n,int k,double *A,double *B,double *C)
-{
-    cublasHandle_t handle;
-    cublasCreate(&handle);
-    double alpha; 
-    double beta;
-    alpha= 1.0;
-    beta = 0.0;
-    cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha, B, n, A, k, &beta, C, n );
-    cublasDestroy(handle);
-
-}
-*/
 void matmult_gpulib(int m, int n, int k, double *A, double *B, double *C) {
 const double alpha = 1.0; const double beta = 0.0;
 	
