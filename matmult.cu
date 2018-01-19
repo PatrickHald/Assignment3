@@ -24,13 +24,13 @@ extern "C" {
 #define NEIGHBOR 2
 
 //number of elements per thread matmult_gpu4()
-#define T 14
+#define T 12
 
 //block size for matmult_gpu5()
 #define BLOCK_SIZE 16
 
 //choose if you want the times to be printed
-#define PRINT_TIMES 1
+#define PRINT_TIMES 0
 
 
 void matmult_nat(int m,int n,int k,double *A,double *B,double *C);
@@ -259,6 +259,7 @@ void matmult_gpu2(int m,int n,int k,double *A,double *B,double *C)
     double time1 = omp_get_wtime();
 
     // Cuda launch
+    cudaSetDevice(1);
     int K = 32;
     int Gx = ceil((double)n / K);
     int Gy = ceil((double)m / K);
@@ -284,7 +285,7 @@ void matmult_gpu2(int m,int n,int k,double *A,double *B,double *C)
 	printf("time to run the program = %3.6f seconds\n", time2 - time1);
 	printf("time to transfer DtoH = %3.6f seconds\n", time3 - time2);
 	printf("total time = %3.6f seconds\n", time3 - time0);*/
-	printf("%d \t %3.6f \t %3.6f\n", m, time2 - time1, time3 - time0);
+	printf("%d \t %3.6f\n", m, time2 - time1);
     }
  
 }
@@ -361,6 +362,7 @@ void matmult_gpu3(int m,int n,int k,double *A,double *B,double *C)
     {
 
     // Cuda launch
+    cudaSetDevice(1);
     int K = 32;
     int Gx = ceil((double)n / K);
     int Gy = ceil((double)m / K);
@@ -373,6 +375,7 @@ void matmult_gpu3(int m,int n,int k,double *A,double *B,double *C)
     else if(NEIGHBOR==2)
     {
     // Cuda launch
+    cudaSetDevice(1);
     int K = 32;
     int Gx = ceil((double)n / K);
     int Gy = ceil((double)m / K);
@@ -403,38 +406,6 @@ void matmult_gpu3(int m,int n,int k,double *A,double *B,double *C)
     }
 
 }
-
-
-/*
-__global__ void gpu4_old(int m,int n,int k,double *A,double *B,double *C)
-{
-    int l, s;
-    int j = threadIdx.x + blockIdx.x * blockDim.x;
-    int i = threadIdx.y + blockIdx.y * blockDim.y;
-    int S = m - i * T;
-    
-    if(T*(i + 1) - 1 < m && j < n){
-	for(s = 0; s < T; s++)
-	    C[(T*i+s) * n + j] = 0.0;	
-	FOR_l_TO_k
-	    {
-	    for(s = 0; s < T; s++)
-		C[(T*i+s) * n + j]  += A[(T *i + s) * k + l] * B[l * n + j];
-	    }
-	
-    }
-    else if(T*i < m && j < n){
-	for(int s = 0; s < S ; s++)
-	    C[(T*i+s) * n + j] = 0.0;
-	FOR_l_TO_k
-	    {
-	    for(int s = 0; s < S ; s++)
-	       C[(T*i+s) * n + j]  += A[(T *i + s) * k + l] * B[l * n + j];
-	    }
-	
-    }
-    
-}*/
 
 __global__ void gpu4(int m,int n,int k,double *A,double *B,double *C)
 {
@@ -471,7 +442,6 @@ __global__ void gpu4(int m,int n,int k,double *A,double *B,double *C)
     
 }
 
-
 void matmult_gpu4(int m,int n,int k,double *A,double *B,double *C)
 {
 // Each thread computes T elements of C
@@ -492,6 +462,7 @@ void matmult_gpu4(int m,int n,int k,double *A,double *B,double *C)
     double time1 = omp_get_wtime();
 
     // Cuda launch
+    cudaSetDevice(1);
     int K = 32;
     int Gx = ceil((double) n / K);
     int Gy = ceil((double) m / K);
@@ -524,7 +495,6 @@ void matmult_gpu4(int m,int n,int k,double *A,double *B,double *C)
 
 }
 
-
 // Matrices are stored in row-major order:
 // M(row, col) = *(M.elements + row * M.stride + col)
 typedef struct {
@@ -535,7 +505,7 @@ typedef struct {
 } Matrix;
 
 // Get a matrix element
-__device__ float GetElement(const Matrix A, int row, int col)
+__device__ double GetElement(const Matrix A, int row, int col)
 {
     return A.elements[row * A.stride + col];
 }
@@ -550,7 +520,7 @@ __device__ void SetElement(Matrix A, int row, int col,
 // Get the BLOCK_SIZExBLOCK_SIZE sub-matrix Asub of A that is
 // located col sub-matrices to the right and row sub-matrices down
 // from the upper-left corner of A
- __device__ Matrix GetSubMatrix(Matrix A, int row, int col) 
+__device__ Matrix GetSubMatrix(Matrix A, int row, int col) 
 {
     Matrix Asub;
     Asub.width    = BLOCK_SIZE;
@@ -594,7 +564,7 @@ void matmult_gpu5(int m,int n,int k,double *A,double *B,double *C)
 
     // Invoke kernel
     dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-    dim3 dimGrid(m / dimBlock.x, n / dimBlock.y);
+    dim3 dimGrid(n / dimBlock.x, m / dimBlock.y);
     gpu5<<<dimGrid, dimBlock>>>(d_A, d_B, d_C);
     cudaDeviceSynchronize();
 
@@ -666,21 +636,45 @@ void matmult_gpu5(int m,int n,int k,double *A,double *B,double *C)
     SetElement(Csub, row, col, Cvalue);
 }
 
-
-void matmult_gpulib(int m,int n,int k,double *A,double *B,double *C)
+/*void matmult_gpulib(int m,int n,int k,double *A,double *B,double *C)
 {
     cublasHandle_t handle;
-    /*cublasStatus_t stat;
-    cublasCreate(&handle);*/
-    //cublasStatus_t;
     cublasCreate(&handle);
     double alpha; 
     double beta;
     alpha= 1.0;
     beta = 0.0;
-    cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha, B, k, A, m, &beta, C, m );
+    cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha, B, n, A, k, &beta, C, n );
     cublasDestroy(handle);
 
+}
+*/
+void matmult_gpulib(int m, int n, int k, double *A, double *B, double *C) {
+const double alpha = 1.0; const double beta = 0.0;
+	
+
+	double *d_A; double *d_B ; 
+	double *d_C;
+	cublasHandle_t handle;
+	cublasCreate(&handle);
+
+	cudaMalloc((void **) &d_A, m*k*sizeof(double));
+	cudaMalloc((void **) &d_B, k*n*sizeof(double));
+	cudaMalloc((void **) &d_C, m*n*sizeof(double));
+
+	cudaMemcpy(d_A, A, m*k*sizeof(d_A), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_B, B, k*n*sizeof(d_B), cudaMemcpyHostToDevice);
+
+	
+	cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha, d_B, n, d_A, k, &beta, d_C, n);
+
+	
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	cudaMemcpy(C, d_C, m*n*sizeof(C), cudaMemcpyDeviceToHost);
+
+	cublasDestroy(handle);
+	cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
 }
 
 void matmult_gpu6(int m,int n,int k,double *A,double *B,double *C)
