@@ -19,9 +19,9 @@ double jacobi(int para, int N, double **array_in, double **array_out, int max_it
 	    	array_out[i][j] = 0.25*(array_in[i-1][j]+array_in[i+1][j]+array_in[i] 			[j-1]+array_in[i][j+1]+fmatrix[i][j]);
 		}
 	   }
-	//tmp=array_in;
+	tmp=array_in;
 	array_in = array_out;
-	//array_out = tmp;
+	array_out = tmp;
 	k++;
 
     }
