@@ -2,7 +2,7 @@
 #define __JACOBI_GPU_SEQ_H
 
 
-void jacobi_gpu_seq(int N, double *array_in, double *array_out, double *fmatrix);
+__global__ double jacobi_gpu_seq(int N, double *array_in, double *array_out, double *fmatrix);
 
 
 #endif
