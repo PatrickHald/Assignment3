@@ -10,4 +10,4 @@
 #BSUB -gpu "num=1:mode=exclusive_process:mps=yes"
 module load cuda/9.1
 
-plot_q0203.sh
+plot_q03.sh

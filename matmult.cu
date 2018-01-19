@@ -20,10 +20,17 @@ extern "C" {
 #define SIZE_B k*n*sizeof(double)
 #define SIZE_C m*n*sizeof(double)
 
+//choice of the neighbor for matmult_gpu3() 1 = right || 2 = below
+#define NEIGHBOR 2
+
+//number of elements per thread matmult_gpu4()
+#define T 14
+
+//block size for matmult_gpu5()
 #define BLOCK_SIZE 16
 
 //choose if you want the times to be printed
-#define PRINT_TIMES 0
+#define PRINT_TIMES 1
 
 
 void matmult_nat(int m,int n,int k,double *A,double *B,double *C);
@@ -67,7 +74,8 @@ void matmult_lib(int m,int n,int k,double *A,double *B,double *C)
     double time1 = omp_get_wtime();
 
     if (PRINT_TIMES == 1)
-	printf("time to transfer HtoD = %3.6f seconds\n", time1 - time0);
+	//printf("time to transfer HtoD = %3.6f seconds\n", time1 - time0);
+	printf("%d \t %3.6f\n", m, time1 - time0);
 
 }
 
@@ -209,10 +217,11 @@ void matmult_gpu1(int m,int n,int k,double *A,double *B,double *C)
     cudaFree(d_C);
     
     if (PRINT_TIMES == 1){
-	printf("time to transfer HtoD = %3.6f seconds\n", time1 - time0);
-	printf("time to run the program = %3.6f seconds\n", time2 - time1);
-	printf("time to transfer DtoH = %3.6f seconds\n", time3 - time2);
-	printf("total time = %3.6f seconds\n", time3 - time0);
+	//printf("time to transfer HtoD = %3.6f seconds\n", time1 - time0);
+	//printf("time to run the program = %3.6f seconds\n", time2 - time1);
+	//printf("time to transfer DtoH = %3.6f seconds\n", time3 - time2);
+	//printf("total time = %3.6f seconds\n", time3 - time0);
+	printf("%d \t %3.6f\n", m, time2 - time1);
     }
 }
 
@@ -271,16 +280,18 @@ void matmult_gpu2(int m,int n,int k,double *A,double *B,double *C)
     cudaFree(d_C);
 
     if (PRINT_TIMES == 1){
-	printf("time to transfer HtoD = %3.6f seconds\n", time1 - time0);
+	/*printf("time to transfer HtoD = %3.6f seconds\n", time1 - time0);
 	printf("time to run the program = %3.6f seconds\n", time2 - time1);
 	printf("time to transfer DtoH = %3.6f seconds\n", time3 - time2);
-	printf("total time = %3.6f seconds\n", time3 - time0);
+	printf("total time = %3.6f seconds\n", time3 - time0);*/
+	printf("%d \t %3.6f \t %3.6f\n", m, time2 - time1, time3 - time0);
     }
  
 }
 
-__global__ void gpu3(int m,int n,int k,double *A,double *B,double *C)
+__global__ void gpu3b(int m,int n,int k,double *A,double *B,double *C)
 {
+// One thread computes 2 elements of C, that are vertical neighbors.
     int l;
     int j = threadIdx.x + blockIdx.x * blockDim.x;
     int i = threadIdx.y + blockIdx.y * blockDim.y;
@@ -298,6 +309,31 @@ __global__ void gpu3(int m,int n,int k,double *A,double *B,double *C)
 	FOR_l_TO_k
 	    res1 += A[2 *i * k + l] * B[l * n + j];
 	C[2 * i * n + j] = res1;
+    }
+    
+}
+
+__global__ void gpu3r(int m,int n,int k,double *A,double *B,double *C)
+{
+// One thread computes 2 elements of C, that are horizontal neighbors.
+// This kernel was used to compare timings of vertical and horizontal choices, but is the less efficient so gpu3b is preferred.
+    int l;
+    int j = threadIdx.x + blockIdx.x * blockDim.x;
+    int i = threadIdx.y + blockIdx.y * blockDim.y;
+    double res1 = 0.0, res2 = 0.0;
+    if(i < m && 2*j + 1 < n){
+	FOR_l_TO_k
+	    {
+	    res1 += A[i * k + l] * B[l * n + 2 * j];
+	    res2 += A[i * k + l] * B[l * n + 2*j+1];
+	    }
+	C[i * n + 2*j] = res1;
+	C[i * n + 2*j+1] = res2;
+    }
+    else if(i < m && 2*j+1 == n){
+	FOR_l_TO_k
+	    res1 += A[i * k + l] * B[l * n + 2*j];
+	C[i * n + 2*j] = res1;
     }
     
 }
@@ -321,16 +357,31 @@ void matmult_gpu3(int m,int n,int k,double *A,double *B,double *C)
 
     double time1 = omp_get_wtime();
 
+    if(NEIGHBOR==1)
+    {
+
+    // Cuda launch
+    int K = 32;
+    int Gx = ceil((double)n / K);
+    int Gy = ceil((double)m / K);
+    dim3 dimGrid(ceil((double)Gx/2),Gy,1); // number of blocks 2D
+    dim3 dimBlock(K,K,1); // number of threads per block 2D
+    gpu3r<<<dimGrid,dimBlock>>>(m, n, k, d_A, d_B, d_C);
+    
+    cudaDeviceSynchronize();
+    }
+    else if(NEIGHBOR==2)
+    {
     // Cuda launch
     int K = 32;
     int Gx = ceil((double)n / K);
     int Gy = ceil((double)m / K);
     dim3 dimGrid(Gx,ceil((double)Gy/2),1); // number of blocks 2D
     dim3 dimBlock(K,K,1); // number of threads per block 2D
-    gpu3<<<dimGrid,dimBlock>>>(m, n, k, d_A, d_B, d_C);
-
+    gpu3b<<<dimGrid,dimBlock>>>(m, n, k, d_A, d_B, d_C);
+    
     cudaDeviceSynchronize();
-
+    }
     double time2 = omp_get_wtime();
 
     // Transfer data from device to host 
@@ -344,15 +395,18 @@ void matmult_gpu3(int m,int n,int k,double *A,double *B,double *C)
     cudaFree(d_C);
 
     if (PRINT_TIMES == 1){
-	printf("time to transfer HtoD = %3.6f seconds\n", time1 - time0);
-	printf("time to run the program = %3.6f seconds\n", time2 - time1);
-	printf("time to transfer DtoH = %3.6f seconds\n", time3 - time2);
-	printf("total time = %3.6f seconds\n", time3 - time0);
+	//printf("time to transfer HtoD = %3.6f seconds\n", time1 - time0);
+	//printf("time to run the program = %3.6f seconds\n", time2 - time1);
+	//printf("time to transfer DtoH = %3.6f seconds\n", time3 - time2);
+	//printf("total time = %3.6f seconds\n", time3 - time0);
+	printf("%d \t %3.6f\n", m, time2 - time1);
     }
 
 }
 
-__global__ void gpu4(int T, int m,int n,int k,double *A,double *B,double *C)
+
+/*
+__global__ void gpu4_old(int m,int n,int k,double *A,double *B,double *C)
 {
     int l, s;
     int j = threadIdx.x + blockIdx.x * blockDim.x;
@@ -380,6 +434,41 @@ __global__ void gpu4(int T, int m,int n,int k,double *A,double *B,double *C)
 	
     }
     
+}*/
+
+__global__ void gpu4(int m,int n,int k,double *A,double *B,double *C)
+{
+    int l, s;
+    int j = threadIdx.x + blockIdx.x * blockDim.x;
+    int i = threadIdx.y + blockIdx.y * blockDim.y;
+    int S = m - i * T;
+
+    double res[T];
+    
+    if(T*(i + 1) - 1 < m && j < n){
+	for(s = 0; s < T; s++)
+	    res[s] = 0.0;	
+	FOR_l_TO_k
+	    {
+	    for(s = 0; s < T; s++)
+		res[s] += A[(T *i + s) * k + l] * B[l * n + j];
+	    }
+	for(s = 0; s < T; s++)
+	    C[(T*i+s) * n + j] = res[s];
+
+    }
+    else if(T*i < m && j < n){
+	for(s = 0; s < S ; s++)
+	    res[s] = 0.0;
+	FOR_l_TO_k
+	    {
+	    for(s = 0; s < S ; s++)
+	       res[s] += A[(T *i + s) * k + l] * B[l * n + j];
+	    }
+	for(s = 0; s < S; s++)
+	    C[(T*i+s) * n + j] = res[s];
+    }
+    
 }
 
 
@@ -387,7 +476,6 @@ void matmult_gpu4(int m,int n,int k,double *A,double *B,double *C)
 {
 // Each thread computes T elements of C
     double *d_A, *d_B, *d_C;
-    int T = 10;
 
     // Allocate memory on the GPU
     cudaMalloc((void**)&d_A, SIZE_A);
@@ -409,7 +497,7 @@ void matmult_gpu4(int m,int n,int k,double *A,double *B,double *C)
     int Gy = ceil((double) m / K);
     dim3 dimGrid(Gx,ceil((double)Gy/T),1); // number of blocks 2D
     dim3 dimBlock(K,K,1); // number of threads per block 2D
-    gpu4<<<dimGrid,dimBlock>>>(T, m, n, k, d_A, d_B, d_C);
+    gpu4<<<dimGrid,dimBlock>>>(m, n, k, d_A, d_B, d_C);
 
     cudaDeviceSynchronize();
 
@@ -426,10 +514,12 @@ void matmult_gpu4(int m,int n,int k,double *A,double *B,double *C)
     cudaFree(d_C);
 
     if (PRINT_TIMES == 1){
-	printf("time to transfer HtoD = %3.6f seconds\n", time1 - time0);
-	printf("time to run the program = %3.6f seconds\n", time2 - time1);
-	printf("time to transfer DtoH = %3.6f seconds\n", time3 - time2);
-	printf("total time = %3.6f seconds\n", time3 - time0);
+	//printf("time to transfer HtoD = %3.6f seconds\n", time1 - time0);
+	//printf("time to run the program = %3.6f seconds\n", time2 - time1);
+	//printf("time to transfer DtoH = %3.6f seconds\n", time3 - time2);
+	//printf("total time = %3.6f seconds\n", time3 - time0);
+	printf("%d \t %3.6f \n", m, time2 - time1);
+ 
     }
 
 }
